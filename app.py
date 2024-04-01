@@ -1,9 +1,10 @@
+import os
 from litestar import LiteStar, Path
 from pydantic import BaseModel
 from meilisearch import Client
 
 # Initialize MeiliSearch client
-meili_client = Client('https://meilisearch.k3s.koski.co', '<apitoken>')
+meili_client = Client('https://meilisearch.k3s.koski.co', os.environ.get("MEILI_API_KEY"))
 
 app = LiteStar()
 
