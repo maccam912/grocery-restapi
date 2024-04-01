@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from meilisearch import Client
 
 # Initialize MeiliSearch client
-meili_client = Client('https://meilisearch.k3s.koski.co', '***REMOVED***')
+meili_client = Client('https://meilisearch.k3s.koski.co', '<apitoken>')
 
 app = LiteStar()
 
