@@ -1,0 +1,23 @@
+[project]
+name = "grocery-restapi"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Matt Koski",email = "maccam912@gmail.com"},
+]
+dependencies = [
+    "litestar>=2.7.1",
+    "pydantic>=2.6.4",
+    "meilisearch>=0.31.0",
+    "uvicorn>=0.29.0",
+]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+package-type = "application"
+
+[tool.pdm.scripts]
+app = "uvicorn app:app --reload --host 0.0.0.0 --port 8000"
