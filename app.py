@@ -1,5 +1,5 @@
 import os
-from litestar import Litestar, get, post
+from litestar import Litestar, get, post, MediaType
 from litestar.openapi import OpenAPIConfig
 from litestar.openapi.spec import Server
 from litestar.config.cors import CORSConfig
@@ -19,15 +19,15 @@ class SalesResponseModel(BaseModel):
     regular: float
     discountPercent: float
 
-@get("/sales")
-async def get_sales() -> list[SalesResponseModel]:
+@get("/sales", media_type=MediaType.TEXT)
+async def get_sales() -> str:
     idx = meili_client.index('items')
     search_results = idx.search('', {
         'sort': ['discountPercent:desc'],
         'filter': ['stockLevel IN [HIGH, LOW]'],
-        'limit': 20,
+        'limit': 200,
     })
-    results = [SalesResponseModel(upc=hit['upc'], description=hit['description'], promo=hit['promo'], regular=hit['regular'], discountPercent=hit['discountPercent']) for hit in search_results['hits']]
+    results = "\n".join([f"{hit['description']}\t{100*round(hit['discountPercent'])}% off\t${hit['promo']}" for hit in search_results['hits']])
     return results
 
 @post("/query")
@@ -42,6 +42,7 @@ async def search_query(data: QueryModel) -> list[dict]:
 cors_config = CORSConfig(allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 app = Litestar([get_sales, search_query], cors_config=cors_config, openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0", servers=[Server(url="https://grocery-restapi.k3s.koski.co")]))
+# app = Litestar([get_sales, search_query], cors_config=cors_config, openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0"))
 
 if __name__ == "__main__":
     import uvicorn
