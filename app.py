@@ -1,5 +1,7 @@
 import os
 from litestar import Litestar, get, post
+from litestar.openapi import OpenAPIConfig
+from litestar.openapi.spec import Server
 from pydantic import BaseModel
 from meilisearch import Client
 
@@ -36,7 +38,7 @@ async def search_query(request: QueryModel) -> list[dict]:
     results = [{'upc': hit['upc'], 'description': hit['description'], 'promo': hit['promo'], 'regular': hit['regular'], 'discountPercent': hit['discountPercent']} for hit in search_results['hits']]
     return results
 
-app = Litestar([get_sales, search_query])
+app = Litestar([get_sales, search_query], openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0", servers=[Server(url="https://grocery-restapi.k3s.koski.co")]))
 
 if __name__ == "__main__":
     import uvicorn
