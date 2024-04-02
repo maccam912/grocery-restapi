@@ -32,14 +32,14 @@ async def get_sales() -> list[SalesResponseModel]:
 
 @post("/query")
 async def search_query(data: QueryModel) -> list[dict]:
-    search_results = meili_client.index('items').search(data.query, {
+    search_results = meili_client.index('items').search(data.q, {
         'filter': ['stockLevel IN [HIGH, LOW]'],
         'limit': 50,
     })
     results = [{'upc': hit['upc'], 'description': hit['description'], 'promo': hit['promo'], 'regular': hit['regular'], 'discountPercent': hit['discountPercent']} for hit in search_results['hits']]
     return results
 
-cors_config = CORSConfig(allow_origins=["*"])
+cors_config = CORSConfig(allow_origins=["https://*", "http://*"], allow_methods=["*"], allow_headers=["*"])
 
 app = Litestar([get_sales, search_query], cors_config=cors_config, openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0", servers=[Server(url="https://grocery-restapi.k3s.koski.co")]))
 
