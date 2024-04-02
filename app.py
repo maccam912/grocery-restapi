@@ -24,14 +24,14 @@ async def get_sales() -> list[SalesResponseModel]:
     search_results = idx.search('', {
         'sort': ['discountPercent:desc'],
         'filter': ['stockLevel IN [HIGH, LOW]'],
-        'limit': 1000,
+        'limit': 100,
     })
     results = [SalesResponseModel(upc=hit['upc'], description=hit['description'], promo=hit['promo'], regular=hit['regular'], discountPercent=hit['discountPercent']) for hit in search_results['hits']]
     return results
 
 @post("/query")
-async def search_query(request: QueryModel) -> list[dict]:
-    search_results = meili_client.index('items').search(request.query, {
+async def search_query(data: QueryModel) -> list[dict]:
+    search_results = meili_client.index('items').search(data.query, {
         'filter': ['stockLevel IN [HIGH, LOW]'],
         'limit': 50,
     })
