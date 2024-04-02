@@ -24,7 +24,7 @@ async def get_sales() -> list[SalesResponseModel]:
     search_results = idx.search('', {
         'sort': ['discountPercent:desc'],
         'filter': ['stockLevel IN [HIGH, LOW]'],
-        'limit': 100,
+        'limit': 20,
     })
     results = [SalesResponseModel(upc=hit['upc'], description=hit['description'], promo=hit['promo'], regular=hit['regular'], discountPercent=hit['discountPercent']) for hit in search_results['hits']]
     return results
