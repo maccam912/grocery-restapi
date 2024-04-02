@@ -10,27 +10,34 @@ class QueryModel(BaseModel):
     q: str
 
 class SalesResponseModel(BaseModel):
-    id: str
-    title: str
-    percentage_off: float
+    upc: str
+    description: str
+    promo: float
+    regular: float
+    discountPercent: float
 
 @get("/sales")
 async def get_sales() -> list[SalesResponseModel]:
-    search_results = meili_client.index('products').search('', {
-        'sort': ['discountPercentage:desc']  # Sort by percentage_off in descending order
+    idx = meili_client.index('items')
+    search_results = idx.search('', {
+        'sort': ['discountPercent:desc'],
+        'filter': ['stockLevel IN [HIGH, LOW]'],
+        'limit': 1000,
     })
-    results = [SalesResponseModel(id=hit['id'], title=hit['title'], percentage_off=hit['percentage_off']) for hit in search_results['hits']]
+    results = [SalesResponseModel(upc=hit['upc'], description=hit['description'], promo=hit['promo'], regular=hit['regular'], discountPercent=hit['discountPercent']) for hit in search_results['hits']]
     return results
 
 @post("/query")
 async def search_query(request: QueryModel) -> list[dict]:
-    search_results = meili_client.index('your_index').search(request.query)
-    # Assuming the documents have 'id' and 'title' fields
-    results = [SalesResponseModel(id=hit['id'], title=hit['title']) for hit in search_results['hits']]
+    search_results = meili_client.index('items').search(request.query, {
+        'filter': ['stockLevel IN [HIGH, LOW]'],
+        'limit': 50,
+    })
+    results = [{'upc': hit['upc'], 'description': hit['description'], 'promo': hit['promo'], 'regular': hit['regular'], 'discountPercent': hit['discountPercent']} for hit in search_results['hits']]
     return results
 
 app = Litestar([get_sales, search_query])
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
