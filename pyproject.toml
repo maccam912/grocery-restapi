@@ -8,8 +8,10 @@ authors = [
 dependencies = [
     "litestar>=2.7.1",
     "pydantic>=2.6.4",
-    "meilisearch>=0.31.0",
     "uvicorn>=0.29.0",
+    "sqlalchemy>=2.0.29",
+    "asyncpg>=0.29.0",
+    "pre-commit>=3.7.0",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"
