@@ -1,6 +1,7 @@
 from typing import Optional, List
 import os
 from litestar import Litestar, post
+from litestar.openapi.spec import Server
 from litestar.openapi import OpenAPIConfig
 from litestar.config.cors import CORSConfig
 from litestar.di import Provide
@@ -140,11 +141,11 @@ async def search(request: ItemSearchRequest, db: AsyncSession) -> ItemSearchResp
 
 cors_config = CORSConfig(allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# app = Litestar([search], cors_config=cors_config, openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0", servers=[Server(url="https://grocery-restapi.k3s.koski.co")]))
 app = Litestar(
     [search],
     cors_config=cors_config,
     openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0"),
+    servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
 )
 
 if __name__ == "__main__":
