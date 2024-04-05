@@ -237,8 +237,11 @@ cors_config = CORSConfig(allow_origins=["*"], allow_methods=["*"], allow_headers
 app = Litestar(
     [search],
     cors_config=cors_config,
-    openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0"),
-    servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
+    openapi_config=OpenAPIConfig(
+        title="Grocery RestAPI",
+        version="1.0.0",
+        servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
+    ),
 )
 
 if __name__ == "__main__":
