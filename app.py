@@ -6,6 +6,7 @@ import logging
 from litestar import Litestar, post
 from litestar.status_codes import HTTP_200_OK
 from litestar.openapi import OpenAPIConfig
+from litestar.openapi.spec import Server
 from litestar.config.cors import CORSConfig
 from litestar.di import Provide
 from pydantic import BaseModel
@@ -237,7 +238,7 @@ app = Litestar(
     [search],
     cors_config=cors_config,
     openapi_config=OpenAPIConfig(title="Grocery RestAPI", version="1.0.0"),
-    # servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
+    servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
 )
 
 if __name__ == "__main__":
