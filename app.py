@@ -194,20 +194,31 @@ async def search(data: ItemSearchRequest, db: AsyncSession) -> ItemSearchRespons
     """
     logger.debug("Search request received", request=data.dict())
     async with db as session:
-        query = "SELECT category, description, promo_price, regular_price, stock_level, upc, discount_percent FROM public.items_view WHERE promo_price > 0"
+        base_query = "SELECT category, description, promo_price, regular_price, stock_level, upc, discount_percent FROM public.items_view"
+        conditions = []
+        if data.on_sale:
+            conditions.append("promo_price > 0")
+
         if data.category:
-            query += f" AND category = '{data.category.value}'"  # Use .value to get the string representation
+            conditions.append(
+                f"category = '{data.category.value}'"
+            )  # Use .value to get the string representation
             logger.debug("Filtering by category", category=data.category.value)
+
         if data.description:
-            query += f" AND description LIKE '%{data.description}%'"
+            ts_query = "to_tsvector('english', description) @@ plainto_tsquery('english', :description)"
+            conditions.append(ts_query)
             logger.debug("Filtering by description", description=data.description)
-        if not data.on_sale:
-            query = query.replace("WHERE promo_price > 0", "")
-            logger.debug("Including items not on sale")
 
-        query += " ORDER BY discount_percent DESC LIMIT 100"  # Limit the results to 100 records
+        where_clause = " AND ".join(conditions)
+        if where_clause:
+            base_query += " WHERE " + where_clause
 
-        result = await session.execute(text(query))
+        base_query += " ORDER BY discount_percent DESC LIMIT 100"  # Limit the results to 100 records
+
+        result = await session.execute(
+            text(base_query), {"description": data.description}
+        )
         items = result.fetchall()
         logger.info("Search query executed", items_count=len(items))
 
