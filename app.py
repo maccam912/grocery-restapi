@@ -6,7 +6,6 @@ import logging
 from litestar import Litestar, post
 from litestar.status_codes import HTTP_200_OK
 from litestar.openapi import OpenAPIConfig
-from litestar.openapi.spec import Server
 from litestar.config.cors import CORSConfig
 from litestar.di import Provide
 from pydantic import BaseModel
@@ -14,6 +13,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
+from litestar import Response
 
 """
 This module defines the structure and functionality for a grocery store's REST API.
@@ -103,11 +103,13 @@ class ItemSearchRequest(BaseModel):
         A keyword to search in the item descriptions.
     on_sale : Optional[bool]
         A flag to filter items that are on sale.
+    in_stock: Optional[str] = None
     """
 
     category: Optional[Category] = None
     description: Optional[str] = None
     on_sale: bool = True
+    in_stock: Optional[str] = None
 
 
 class Item(BaseModel):
@@ -172,13 +174,13 @@ async def get_db_session():
 
 @post(
     "/sales",
-    response_model=ItemSearchResponse,
+    response_class=Response,
     dependencies={"db": Provide(get_db_session)},
     status_code=HTTP_200_OK,
 )
-async def search(data: ItemSearchRequest, db: AsyncSession) -> ItemSearchResponse:
+async def search(data: ItemSearchRequest, db: AsyncSession) -> Response:
     """
-    Endpoint for searching items based on the provided criteria.
+    Endpoint for searching items based on the provided criteria, responding with CSV formatted plaintext.
 
     Parameters
     ----------
@@ -189,8 +191,8 @@ async def search(data: ItemSearchRequest, db: AsyncSession) -> ItemSearchRespons
 
     Returns
     -------
-    ItemSearchResponse
-        The search results containing items that match the criteria.
+    Response
+        The search results containing items that match the criteria, formatted as CSV.
     """
     logger.debug("Search request received", request=data.dict())
     async with db as session:
@@ -200,9 +202,7 @@ async def search(data: ItemSearchRequest, db: AsyncSession) -> ItemSearchRespons
             conditions.append("promo_price > 0")
 
         if data.category:
-            conditions.append(
-                f"category = '{data.category.value}'"
-            )  # Use .value to get the string representation
+            conditions.append(f"category = '{data.category.value}'")
             logger.debug("Filtering by category", category=data.category.value)
 
         if data.description:
@@ -210,11 +210,19 @@ async def search(data: ItemSearchRequest, db: AsyncSession) -> ItemSearchRespons
             conditions.append(ts_query)
             logger.debug("Filtering by description", description=data.description)
 
+        if data.in_stock:
+            if data.in_stock in ["HIGH", "LOW"]:
+                conditions.append(f"stock_level = '{data.in_stock}'")
+                logger.debug("Filtering by stock level", stock_level=data.in_stock)
+            else:
+                logger.error("Invalid stock level value", stock_level=data.in_stock)
+                raise ValueError("Invalid stock level value. Must be 'HIGH' or 'LOW'.")
+
         where_clause = " AND ".join(conditions)
         if where_clause:
             base_query += " WHERE " + where_clause
 
-        base_query += " ORDER BY discount_percent DESC LIMIT 100"  # Limit the results to 100 records
+        base_query += " ORDER BY discount_percent DESC LIMIT 500"
 
         result = await session.execute(
             text(base_query), {"description": data.description}
@@ -222,25 +230,15 @@ async def search(data: ItemSearchRequest, db: AsyncSession) -> ItemSearchRespons
         items = result.fetchall()
         logger.info("Search query executed", items_count=len(items))
 
-        # Convert tuple results to dictionaries matching the Item model fields
-        items_dicts = [
-            {
-                "category": item[0],
-                "description": item[1],
-                "promo_price": float(item[2])
-                if item[2] is not None
-                else None,  # Handle None values
-                "regular_price": float(item[3]) if item[3] is not None else None,
-                "stock_level": item[4],
-                "upc": item[5],
-                "discount_percent": float(item[6]) if item[6] is not None else None,
-            }
-            for item in items
-        ]
-
-        return ItemSearchResponse(
-            items=[Item(**item_dict) for item_dict in items_dicts]
+        # Format results as CSV
+        csv_data = "Description\tDiscount Percent\tUPC\n" + "\n".join(
+            [
+                f"{item[1]}\t{item[6] if item[6] is not None else ''}\t{item[5]}"
+                for item in items
+            ]
         )
+
+        return Response(content=csv_data, media_type="text/plain")
 
 
 cors_config = CORSConfig(allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -251,7 +249,7 @@ app = Litestar(
     openapi_config=OpenAPIConfig(
         title="Grocery RestAPI",
         version="1.0.0",
-        servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
+        # servers=[Server(url="https://grocery-restapi.k3s.koski.co")],
     ),
 )
 
